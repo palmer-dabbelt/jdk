@@ -204,6 +204,15 @@ void NativeCall::set_destination_mt_safe(address dest, bool assert_lock) {
     set_destination(dest);
   } else {
     assert (trampoline_stub_addr != NULL, "we need a trampoline");
+    // The trampoline's destination address was just updated and we're about to
+    // install a jump to it.  We need to make sure the trampoline destination
+    // store is visible before the instruction store, as otherwise we could end
+    // up fetching the trampoline before the destination is visible.
+    //
+    // Trampoline destination updates have a "dmb ish", but that's not
+    // sufficient because the inner sharable domain is not guarnteed to contain
+    // the point of unification.
+    __asm__ volatile ("dmb nsh");
     set_destination(trampoline_stub_addr);
   }
 
